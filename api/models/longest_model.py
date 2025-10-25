@@ -34,9 +34,7 @@ def get_longest_lines(limit: int = 100, file_name: Optional[str] = None) -> List
     Returns up to `limit` longest lines either across all files or for one file.
     Each item: { length, file_name, line_number, line }.
     """
-    # clamp limit for safety
-    limit = max(1, min(1000, int(limit)))
-    logger.info(f"Searching for {limit} longest lines. File filter: {file_name or 'All'}")
+    logger.info(f"Searching for up to {limit} longest lines. File filter: {file_name or 'All'}")
 
     storage = Storage.from_env()
 

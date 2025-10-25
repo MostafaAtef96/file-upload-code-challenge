@@ -12,12 +12,20 @@ logger = logging.getLogger(__name__)
 def longest_lines():
     ctype = negotiate_content_type(request)
     file_name = request.args.get("file_name")
-    try:
-        limit = int(request.args.get("limit", 100))
-    except (ValueError, TypeError):
-        limit = 100
+
+    # Determine the default limit based on whether a file_name is provided
+    default_limit = 20 if file_name else 100
 
     try:
+        # Use the provided limit, or fall back to the calculated default
+        limit = int(request.args.get("limit", default_limit))
+    except (ValueError, TypeError):
+        # If parsing fails (e.g., limit="abc"), use the default
+        limit = default_limit
+
+    try:
+        # Clamp the final limit to the allowed range
+        limit = max(1, min(1000, limit))
         items = get_longest_lines(limit=limit, file_name=file_name)
     except ValueError as ve:
         # Not found / no files -> 404 style response

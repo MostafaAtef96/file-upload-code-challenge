@@ -95,3 +95,20 @@ def test_get_longest_lines_limit_clamping(client):
     setup_file(client, "a.txt", b"a\nb\nc\nd\ne")
     rv = client.get("/lines/longest?limit=2000", headers={"Accept": "application/json"})
     assert len(rv.get_json()) == 5  # The model clamps the limit to 1000, but there are only 5 lines
+
+
+def test_get_longest_lines_defaults(client):
+    """Test the default limit behavior."""
+    # Create a file with 25 lines
+    content = b"\n".join([f"line {i}".encode() for i in range(25)])
+    setup_file(client, "test.txt", content)
+
+    # 1. No file, no limit -> should default to 100, but return all 25
+    rv_all = client.get("/lines/longest", headers={"Accept": "application/json"})
+    assert rv_all.status_code == 200
+    assert len(rv_all.get_json()) == 25
+
+    # 2. File specified, no limit -> should default to 20
+    rv_file = client.get("/lines/longest?file_name=test.txt", headers={"Accept": "application/json"})
+    assert rv_file.status_code == 200
+    assert len(rv_file.get_json()) == 20
