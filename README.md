@@ -62,3 +62,41 @@ Each commit message **must start** with one of the following symbols to indicate
 5. **20 longest lines (one file)**: `GET /lines/longest?file_name=<name>&limit=20`.
 6. **Content types**: support `text/plain`, `application/json`, `application/xml`.
 7. **Scalability**: work with multi‑GB files without reading entire files into memory.
+
+---
+
+## Design Overview
+
+### Storage
+
+* **Option A (local)**: files in `./uploads/`, index in `./indexes/`, metadata in `./data.db` (SQLite).
+* **Option B (Cloudflare R2)**: objects under `uploads/<filename>`, index under `indexes/<filename>.idx`, metadata still in `SQLite` (only file‑level, not per‑line).
+
+### Chunk‑Based Indexing
+
+* On upload, stream bytes and track **byte offsets** of line starts.
+* Record the start offset every **K lines** (`K=1000` by default). The offset of line 0 is always 0.
+* To fetch line *L*:
+
+  * Compute `base = floor(L/K)*K` and `advance = L - base`.
+  * Load the small index; `start_offset = index[base/K]`.
+  * Range‑read from `start_offset`, **skip `advance` newlines**, then capture that line only.
+  * **Example (numbers):** with `K=1000` and target line `L=3456`:
+
+    * `base = floor(3456/1000)*1000 = 3000`
+    * `advance = 3456 - 3000 = 456`
+    * `start_offset = index[3000/1000] = index[3]` (byte position where line 3000 starts)
+    * Range‑read from `start_offset`, skip **456** newline characters; the bytes up to the next `
+      ` are the contents of line **3456**.
+* **Benefits**: tiny index (~8 bytes × N/K), fast random access, no huge DB tables.
+
+### Longest Lines
+
+* Stream lines from storage, keep a **min‑heap** of size `limit` with entries `(length, file, line_no, text)`.
+* Complexity: O(total_lines × log limit). For the default `limit=100`, log factor is tiny.
+
+### Content Negotiation
+
+* Inspect `Accept` header, choose response type.
+* If client requests `application/*`, include metadata fields in JSON/XML bodies.
+* For `text/plain`, return raw line(s) only (no metadata).
