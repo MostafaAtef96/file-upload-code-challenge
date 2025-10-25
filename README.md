@@ -3,7 +3,7 @@
 A small web service that:
 
 * **Uploads** plain text files
-* Returns **one random line** (content negotiation: `text/plain`, `application/json`, `application/xml`, `application/*`)
+* Returns **one random line** (content negotiation: `text/plain`, `application/json`, `application/xml`)
 * Returns **one random line backwards**
 * Returns the **100 longest lines** across all uploads
 * Returns the **20 longest lines** for a specific file
@@ -100,3 +100,123 @@ Each commit message **must start** with one of the following symbols to indicate
 * Inspect `Accept` header, choose response type.
 * If client requests `application/*`, include metadata fields in JSON/XML bodies.
 * For `text/plain`, return raw line(s) only (no metadata).
+
+---
+
+## API Reference
+
+### `POST /files`
+
+Upload a text file.
+
+**Request**: `multipart/form-data`, field `file=@/path/to/file.txt`
+
+**Response 200 (JSON)**
+
+```json
+{
+  "filename": "lorem.txt",
+  "size_bytes": 123456,
+  "num_lines": 4200,
+  "lines_per_chunk": 1000,
+  "object_key": "uploads/lorem.txt",
+  "idx_key": "indexes/lorem.txt.idx"
+}
+```
+
+---
+
+### `GET /lines/random`
+
+Return one random line across all files (or specify `?file_name=`).
+
+**Query Params**
+
+* `file_name` (optional): restrict to specific file.
+
+**Accept: `text/plain`** → returns just the line text.
+
+**Accept: `application/json` or `application/xml`** → returns metadata:
+
+```json
+{
+  "file_name": "lorem.txt",
+  "line_number": 1337,
+  "line": "Veni, vidi, vici.",
+  "most_frequent_letter": "i"
+}
+```
+
+---
+
+### `GET /lines/random/backwards`
+
+Same as above, but the selected line is reversed.
+
+**Accept: `text/plain`** → returns reversed text only.
+
+**Accept: `application/json`/`xml`** →
+
+```json
+{
+  "file_name": "lorem.txt",
+  "line_number": 1337,
+  "line_reversed": ".iciv ,idiv ,ineV",
+  "most_frequent_letter": "i"
+}
+```
+
+---
+
+### `GET /lines/longest`
+
+Return the longest lines.
+
+**Query Params**
+
+* `limit` (optional, default `100`, range `1..1000`)
+* `file_name` (optional): if provided, returns longest `limit` lines of that file; otherwise across all files.
+
+**Accept: `text/plain`** → newline‑joined lines only.
+
+**Accept: `application/json`/`xml`** → array of objects:
+
+```json
+[
+  { "length": 512, "file_name": "a.txt", "line_number": 9012, "line": "..." },
+  { "length": 511, "file_name": "b.txt", "line_number": 77,   "line": "..." }
+]
+```
+
+---
+
+## Testing (quick curl)
+
+```bash
+# upload
+curl -F "file=@/path/to/your.txt" http://127.0.0.1:8000/files
+
+# random line (plain)
+curl -H "Accept: text/plain" http://127.0.0.1:8000/lines/random
+
+# random line (JSON/XML)
+curl -H "Accept: application/json" http://127.0.0.1:8000/lines/random
+curl -H "Accept: application/xml"  http://127.0.0.1:8000/lines/random
+
+# backwards
+curl -H "Accept: text/plain" http://127.0.0.1:8000/lines/random/backwards
+
+# longest (all files or one file)
+curl "http://127.0.0.1:8000/lines/longest?limit=100"
+curl "http://127.0.0.1:8000/lines/longest?file_name=your.txt&limit=20"
+```
+
+---
+
+## Edge Cases & Behavior
+
+* Empty file → `num_lines = 0`; random‑line endpoints return 404
+* File with no trailing `\n` → last line still counted
+* Mixed encodings → undecodable bytes replaced during UTF‑8 decode
+* Only one file uploaded → random across that file’s lines
+* `limit` outside 1..1000 → clamped to bounds
