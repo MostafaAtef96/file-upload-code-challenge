@@ -56,7 +56,7 @@ Each commit message **must start** with one of the following symbols to indicate
 
    * `file_name`
    * `line_number`
-   * `most_frequent_letter` (a–z, case‑insensitive; ties -> alphabetical)
+   * `most_frequent_letter` (a–z, case‑insensitive; see Edge Cases for special behavior)
 3. **Random line (backwards)**: `GET /lines/random/backwards` — same selection, reversed string.
 4. **Longest 100 lines (all files)**: `GET /lines/longest?limit=100` — min‑heap streaming scan across files.
 5. **20 longest lines (one file)**: `GET /lines/longest?file_name=<name>&limit=20`.
@@ -220,3 +220,6 @@ curl "http://127.0.0.1:8000/lines/longest?file_name=your.txt&limit=20"
 * Mixed encodings → undecodable bytes replaced during UTF‑8 decode
 * Only one file uploaded → random across that file’s lines
 * `limit` outside 1..1000 → clamped to bounds
+* **`most_frequent_letter` logic**:
+    * If a line has no letters (e.g., "12345"), the value is `"N/A"`.
+    * If all letters in a line have the same frequency (e.g., "aabb" or "abc"), the value is `"Tie"`.
