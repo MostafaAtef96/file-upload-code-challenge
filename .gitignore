@@ -1,3 +1,6 @@
 # Python bytecode
 __pycache__/
 .pytest_cache/
+
+# Uploaded files and indexes
+uploads/
