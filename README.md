@@ -190,26 +190,66 @@ Return the longest lines.
 
 ---
 
-## Testing (quick curl)
+## Testing
+
+This section covers both automated and manual testing procedures.
+
+### Automated Testing
+
+The test suite uses `pytest`. To run the tests, navigate to the `tests/` directory and execute:
 
 ```bash
-# upload
-curl -F "file=@/path/to/your.txt" http://127.0.0.1:8000/files
-
-# random line (plain)
-curl -H "Accept: text/plain" http://127.0.0.1:8000/lines/random
-
-# random line (JSON/XML)
-curl -H "Accept: application/json" http://127.0.0.1:8000/lines/random
-curl -H "Accept: application/xml"  http://127.0.0.1:8000/lines/random
-
-# backwards
-curl -H "Accept: text/plain" http://127.0.0.1:8000/lines/random/backwards
-
-# longest (all files or one file)
-curl "http://127.0.0.1:8000/lines/longest?limit=100"
-curl "http://127.0.0.1:8000/lines/longest?file_name=your.txt&limit=20"
+pytest -q
 ```
+
+### Manual Testing
+
+Manual testing can be performed using `curl` to interact with the running service.
+
+#### 1. Prepare Test Files
+
+You can generate large test files using the `make_large_files.py` script. To create a file named `large.txt` with 1 million lines:
+
+```bash
+python make_large_files.py --filename large.txt --lines 1000000
+```
+
+#### 2. API Endpoint Tests
+
+The following commands cover the main API endpoints. Replace `your.txt` with the name of a file you have uploaded.
+
+**A. Upload a File**
+```bash
+curl -F "file=@/path/to/your.txt" http://127.0.0.1:8000/files
+```
+
+**B. Get a Random Line**
+*   **Plain Text**: `curl -H "Accept: text/plain" http://127.0.0.1:8000/lines/random`
+*   **JSON**: `curl -H "Accept: application/json" http://127.0.0.1:8000/lines/random`
+*   **XML**: `curl -H "Accept: application/xml" http://127.0.0.1:8000/lines/random`
+
+**C. Get a Random Line Backwards**
+*   **Plain Text**: `curl -H "Accept: text/plain" http://127.0.0.1:8000/lines/random/backwards`
+*   **JSON**: `curl -H "Accept: application/json" http://127.0.0.1:8000/lines/random/backwards`
+*   **XML**: `curl -H "Accept: application/xml" http://127.0.0.1:8000/lines/random/backwards`
+
+**D. Get Longest Lines (Across All Files)**
+*   **Default (100 lines, JSON)**: `curl http://127.0.0.1:8000/lines/longest`
+*   **With a custom limit (e.g., 5 lines)**:
+    *   **JSON**: `curl "http://127.0.0.1:8000/lines/longest?limit=5"`
+    *   **Plain Text**: `curl -H "Accept: text/plain" "http://127.0.0.1:8000/lines/longest?limit=5"`
+    *   **XML**: `curl -H "Accept: application/xml" "http://127.0.0.1:8000/lines/longest?limit=5"`
+
+**E. Get Longest Lines (For a Specific File)**
+*   **Default (20 lines, JSON)**: `curl "http://127.0.0.1:8000/lines/longest?file_name=your.txt"`
+*   **With a custom limit (e.g., 10 lines)**:
+    *   **JSON**: `curl "http://127.0.0.1:8000/lines/longest?file_name=your.txt&limit=10"`
+    *   **Plain Text**: `curl -H "Accept: text/plain" "http://127.0.0.1:8000/lines/longest?file_name=your.txt&limit=10"`
+    *   **XML**: `curl -H "Accept: application/xml" "http://127.0.0.1:8000/lines/longest?file_name=your.txt&limit=10"`
+
+**F. Additional Test Cases**
+*   **Get a random line from a specific file (JSON)**: `curl -H "Accept: application/json" "http://127.0.0.1:8000/lines/random?file_name=your.txt"`
+*   **Test `limit` clamping (requesting 2000, should be clamped to 1000)**: `curl "http://127.0.0.1:8000/lines/longest?limit=2000"`
 
 ---
 
@@ -220,6 +260,10 @@ curl "http://127.0.0.1:8000/lines/longest?file_name=your.txt&limit=20"
 * Mixed encodings → undecodable bytes replaced during UTF‑8 decode
 * Only one file uploaded → random across that file’s lines
 * `limit` outside 1..1000 → clamped to bounds
+* **`GET /lines/longest` behavior**:
+    * If `file_name` is specified without a `limit`, it returns the 20 longest lines for that file.
+    * If `limit` is specified without a `file_name`, it returns that number of longest lines from across all files.
+    * If neither is specified, it returns the 100 longest lines from across all files.
 * **`most_frequent_letter` logic**:
     * If a line has no letters (e.g., "12345"), the value is `"N/A"`.
     * If all letters in a line have the same frequency (e.g., "aabb" or "abc"), the value is `"Tie"`.
