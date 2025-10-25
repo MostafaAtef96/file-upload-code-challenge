@@ -112,3 +112,26 @@ def test_get_line_from_empty_file(client):
     assert data["line"] == ""
     assert data["line_number"] == 0
     assert data["most_frequent_letter"] == "N/A"
+
+
+def test_get_line_backwards(client):
+    """Test the /lines/random/backwards endpoint."""
+    setup_file(client, "test.txt", b"hello world")
+
+    # Test JSON response
+    rv_json = client.get("/lines/random/backwards", headers={"Accept": "application/json"})
+    assert rv_json.status_code == 200
+    data = rv_json.get_json()
+    assert data["line_reversed"] == "dlrow olleh"
+    assert data["most_frequent_letter"] == "l"  # Calculated on the original line
+
+    # Test plain text response
+    rv_text = client.get("/lines/random/backwards", headers={"Accept": "text/plain"})
+    assert rv_text.status_code == 200
+    assert rv_text.data == b"dlrow olleh"
+
+    # Test XML response
+    rv_xml = client.get("/lines/random/backwards", headers={"Accept": "application/xml"})
+    assert rv_xml.status_code == 200
+    root = ET.fromstring(rv_xml.data)
+    assert root.find("line_reversed").text == "dlrow olleh"
