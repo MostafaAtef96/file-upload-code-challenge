@@ -1,9 +1,12 @@
+import logging
 import random
 from typing import Optional, Dict
 
 from api.utils.db import get_conn
 from api.utils.storage import Storage
 from api.utils.reader import load_index, extract_line_from_offset
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_line(file_name: Optional[str] = None) -> Dict:
@@ -25,11 +28,13 @@ def fetch_line(file_name: Optional[str] = None) -> Dict:
     conn = get_conn()
 
     if file_name:
+        logger.info(f"Fetching random line from specified file: {file_name}")
         file_meta = conn.execute("SELECT * FROM files WHERE filename = ?", (file_name,)).fetchone()
         if not file_meta:
             raise ValueError(f"File not found: {file_name}")
     else:
         # Fetch the most recently uploaded file.
+        logger.info("Fetching random line from last uploaded file.")
         file_meta = conn.execute("SELECT * FROM files ORDER BY id DESC LIMIT 1").fetchone()
         if not file_meta:
             raise ValueError("No files have been uploaded yet.")
@@ -54,4 +59,5 @@ def fetch_line(file_name: Optional[str] = None) -> Dict:
         storage=storage, object_key=file_meta["object_key"], start_offset=start_offset, advance_newlines=line_in_chunk
     )
 
+    logger.info(f"Selected line {line_num + 1} from '{file_meta['filename']}'.")
     return {"file_name": file_meta["filename"], "line_number": line_num + 1, "line": line_content}

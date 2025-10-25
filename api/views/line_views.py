@@ -1,4 +1,5 @@
 # api/views/line_views.py
+import logging
 from flask import Blueprint, request, Response, jsonify
 from typing import Optional
 from api.models.line_model import fetch_line
@@ -6,6 +7,7 @@ from api.utils.response import negotiate_content_type, to_xml
 from api.utils.textutils import most_frequent_letter
 
 lines_bp = Blueprint("lines", __name__)
+logger = logging.getLogger(__name__)
 
 @lines_bp.get("/lines/random")
 def get_line():
@@ -15,8 +17,10 @@ def get_line():
     try:
         result = fetch_line(file_name=file_name)
     except ValueError as ve:
+        logger.warning(f"Could not fetch line: {ve}")
         return jsonify({"detail": str(ve)}), 404
     except Exception:
+        logger.exception("An unhandled error occurred while fetching a random line.")
         return jsonify({"detail": "Internal server error"}), 500
 
     # Plain text → return just the line
@@ -46,8 +50,10 @@ def get_line_backwards():
     try:
         result = fetch_line(file_name=file_name)
     except ValueError as ve:
+        logger.warning(f"Could not fetch backwards line: {ve}")
         return jsonify({"detail": str(ve)}), 404
     except Exception:
+        logger.exception("An unhandled error occurred while fetching a backwards line.")
         return jsonify({"detail": "Internal server error"}), 500
 
     line_content = result["line"].strip()

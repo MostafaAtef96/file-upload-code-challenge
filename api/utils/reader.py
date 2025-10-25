@@ -65,3 +65,39 @@ def extract_line_from_offset(storage: Storage, object_key: str, start_offset: in
                 return buf.decode("utf-8", "replace")
     # reached EOF without newline
     return buf.decode("utf-8", "replace")
+
+def iter_lines(storage: Storage, object_key: str):
+    """
+    Stream lines from the beginning of the object (local or R2).
+    Yields decoded UTF-8 strings without trailing newline.
+    """
+    if storage.kind == "r2":
+        resp = storage.client.get_object(Bucket=storage.bucket, Key=object_key, Range="bytes=0-")
+        body = resp["Body"]
+        rem = b""
+        while True:
+            chunk = body.read(CHUNK_BYTES)
+            if not chunk:
+                break
+            data = rem + chunk
+            parts = data.split(b"\n")
+            for line in parts[:-1]:
+                yield line.decode("utf-8", "replace")
+            rem = parts[-1]
+        if rem:
+            yield rem.decode("utf-8", "replace")
+    else:
+        path = os.path.join(storage.base_dir, object_key)
+        rem = b""
+        with open(path, "rb") as f:
+            while True:
+                chunk = f.read(CHUNK_BYTES)
+                if not chunk:
+                    break
+                data = rem + chunk
+                parts = data.split(b"\n")
+                for line in parts[:-1]:
+                    yield line.decode("utf-8", "replace")
+                rem = parts[-1]
+        if rem:
+            yield rem.decode("utf-8", "replace")
