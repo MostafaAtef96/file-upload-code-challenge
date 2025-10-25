@@ -267,3 +267,17 @@ curl -F "file=@/path/to/your.txt" http://127.0.0.1:8000/files
 * **`most_frequent_letter` logic**:
     * If a line has no letters (e.g., "12345"), the value is `"N/A"`.
     * If all letters in a line have the same frequency (e.g., "aabb" or "abc"), the value is `"Tie"`.
+
+    
+---
+
+## Future Enhancements
+
+While the current implementation meets the core requirements, several enhancements could be made for a production-grade service:
+
+*   **Containerization**: The application could be containerized using Docker for consistent, isolated deployments and easier orchestration (e.g., with Kubernetes).
+*   **Simple UI**: A lightweight front-end (e.g., using a simple HTML/CSS/JS page or a framework like Vue/React) could be added to provide a user-friendly interface for uploading files and viewing results.
+*   **Cloud Storage Integration**: The existing design for S3/Cloudflare R2 compatibility could be fully integrated and made the default storage backend, improving scalability and decoupling storage from the application server.
+*   **Asynchronous Processing**: For extremely large files, the upload and indexing process could be offloaded to a background task queue (e.g., Celery with Redis/RabbitMQ) to provide a more responsive API.
+*   **Enhanced Security**: Implementing API key authentication and authorization would protect the service from unauthorized access and misuse.
+*   **Observability**: Integrating structured logging, metrics (e.g., Prometheus), and tracing (e.g., OpenTelemetry) would provide deep insights into application performance and behavior.
